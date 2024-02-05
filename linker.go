@@ -3,7 +3,6 @@ package wasman
 import (
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/c0mm4nd/wasman/config"
 	"github.com/c0mm4nd/wasman/wasm"
@@ -50,11 +49,12 @@ func (l *Linker) Define(modName string, mod *Module) {
 // the Instance's fields like memory
 //
 // e.g. when we wanna add toll after calling the host func f
+//
 //	func ExampleFuncGenerator_addToll() {
 //		var linker = wasman.NewLinker()
 //		var f = func() {fmt.Println("wasm")}
 //
-//		var af = wasman.AdvancedFunc(func(ins *wasman.Instance) interface{} {
+//		var af = wasman.AdvancedFunc(func(ins *wasman.Instance) any {
 //			return func() {
 //				f()
 //				ins.AddGas(11)
@@ -64,10 +64,11 @@ func (l *Linker) Define(modName string, mod *Module) {
 //	}
 //
 // e.g. when we wanna manipulate memory
+//
 //	func ExampleFuncGenerator_addToll() {
 //		var linker = wasman.NewLinker()
 //
-//		var af = wasman.AdvancedFunc(func(ins *wasman.Instance) interface{} {
+//		var af = wasman.AdvancedFunc(func(ins *wasman.Instance) any {
 //			return func(ptr uint32, length uint32) {
 //				msg := ins.Memory[int(ptr), int(ptr+uint32)]
 //				fmt.Println(b)
@@ -76,53 +77,30 @@ func (l *Linker) Define(modName string, mod *Module) {
 //
 //		linker.DefineAdvancedFunc("env", "print_msg", af)
 //	}
-type AdvancedFunc func(ins *Instance) interface{}
+type AdvancedFunc func(ins *Instance) any
 
-// DefineAdvancedFunc will define a AdvancedFunc on linker
-func (l *Linker) DefineAdvancedFunc(modName, funcName string, funcGenerator AdvancedFunc) error {
-	sig, err := getSignature(reflect.ValueOf(funcGenerator(&Instance{})).Type())
+func DefineFunc10[A any](l *Linker, modName, funcName string, f func(A)) error {
+	sig, err := getSignatureN0([]any{*new(A)})
 	if err != nil {
 		return ErrInvalidSign
 	}
+	return l.defineFunc(modName, funcName, sig, f)
+}
 
-	mod, exists := l.Modules[modName]
-	if !exists {
-		mod = &Module{IndexSpace: new(wasm.IndexSpace), ExportSection: map[string]*segments.ExportSegment{}}
-		l.Modules[modName] = mod
+func DefineFunc11[A, Z any](l *Linker, modName, funcName string, f func(A) Z) error {
+	sig, err := getSignatureN1([]any{*new(A)}, *new(Z))
+	if err != nil {
+		return ErrInvalidSign
 	}
-
-	if l.DisableShadowing && mod.ExportSection[funcName] != nil {
-		return config.ErrShadowing
-	}
-
-	mod.ExportSection[funcName] = &segments.ExportSegment{
-		Name: funcName,
-		Desc: &segments.ExportDesc{
-			Kind:  segments.KindFunction,
-			Index: uint32(len(mod.IndexSpace.Functions)),
-		},
-	}
-
-	mod.IndexSpace.Functions = append(mod.IndexSpace.Functions, &wasm.HostFunc{
-		Generator: funcGenerator,
-		Signature: sig,
-	})
-
-	return nil
+	return l.defineFunc(modName, funcName, sig, f)
 }
 
 // DefineFunc puts a simple go style func into Linker's modules.
 // This f should be a simply func which doesnt handle ins's fields.
-func (l *Linker) DefineFunc(modName, funcName string, f interface{}) error {
-	fn := func(ins *Instance) interface{} {
+func (l *Linker) defineFunc(modName, funcName string, sig *types.FuncType, f any) error {
+	fn := func(ins *Instance) any {
 		return f
 	}
-
-	sig, err := getSignature(reflect.ValueOf(f).Type())
-	if err != nil {
-		return ErrInvalidSign
-	}
-
 	mod, exists := l.Modules[modName]
 	if !exists {
 		mod = &Module{IndexSpace: new(wasm.IndexSpace), ExportSection: map[string]*segments.ExportSegment{}}
@@ -149,13 +127,16 @@ func (l *Linker) DefineFunc(modName, funcName string, f interface{}) error {
 	return nil
 }
 
-// DefineGlobal will defined an external global for the main module
-func (l *Linker) DefineGlobal(modName, globalName string, global interface{}) error {
-	ty, err := getTypeOf(reflect.TypeOf(global).Kind())
+func DefineGlobal[T any](l *Linker, modName, globalName string, global T) error {
+	ty, err := getTypeOf(*new(T))
 	if err != nil {
 		return err
 	}
+	return l.defineGlobal(modName, globalName, ty, global)
+}
 
+// DefineGlobal will defined an external global for the main module
+func (l *Linker) defineGlobal(modName, globalName string, ty types.ValueType, global any) error {
 	mod, exists := l.Modules[modName]
 	if !exists {
 		mod = &Module{IndexSpace: new(wasm.IndexSpace), ExportSection: map[string]*segments.ExportSegment{}}
@@ -246,57 +227,53 @@ func (l *Linker) Instantiate(mainModule *Module) (*Instance, error) {
 	return NewInstance(mainModule, l.Modules)
 }
 
-func getSignature(p reflect.Type) (*types.FuncType, error) {
+func getSignatureN0(in []any) (*types.FuncType, error) {
 	var err error
-	in := make([]types.ValueType, p.NumIn())
-	for i := range in {
-		in[i], err = getTypeOf(p.In(i).Kind())
-		if err != nil {
-			return nil, err
-		}
+	ins, err := getTypesOf(in...)
+	if err != nil {
+		return nil, err
 	}
-
-	out := make([]types.ValueType, p.NumOut())
-	for i := range out {
-		out[i], err = getTypeOf(p.Out(i).Kind())
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &types.FuncType{InputTypes: in, ReturnTypes: out}, nil
+	return &types.FuncType{InputTypes: ins, ReturnTypes: []types.ValueType{}}, nil
 }
 
-const is64Bit = uint64(^uintptr(0)) == ^uint64(0)
+func getSignatureN1(in []any, out any) (*types.FuncType, error) {
+	var err error
+	ins, err := getTypesOf(in...)
+	if err != nil {
+		return nil, err
+	}
+	outs, err := getTypesOf(out)
+	if err != nil {
+		return nil, err
+	}
+	return &types.FuncType{InputTypes: ins, ReturnTypes: outs}, nil
+}
+
+func getTypesOf(defaults ...any) ([]types.ValueType, error) {
+	var err error
+	types := make([]types.ValueType, len(defaults))
+	for i, def := range defaults {
+		types[i], err = getTypeOf(def)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return types, nil
+}
 
 // getTypeOf converts the go type into wasm val type
-func getTypeOf(kind reflect.Kind) (types.ValueType, error) {
-	if is64Bit {
-		switch kind {
-		case reflect.Float64:
-			return types.ValueTypeF64, nil
-		case reflect.Float32:
-			return types.ValueTypeF32, nil
-		case reflect.Int32, reflect.Uint32:
-			return types.ValueTypeI32, nil
-		case reflect.Int64, reflect.Uint64, reflect.Uintptr, reflect.UnsafePointer, reflect.Ptr:
-			return types.ValueTypeI64, nil
-		default:
-			return 0x00, fmt.Errorf("invalid type: %s", kind.String())
-		}
-	} else {
-		switch kind {
-		case reflect.Float64:
-			return types.ValueTypeF64, nil
-		case reflect.Float32:
-			return types.ValueTypeF32, nil
-		case reflect.Int32, reflect.Uint32, reflect.Uintptr, reflect.UnsafePointer, reflect.Ptr:
-			return types.ValueTypeI32, nil
-		case reflect.Int64, reflect.Uint64:
-			return types.ValueTypeI64, nil
-		default:
-			return 0x00, fmt.Errorf("invalid type: %s", kind.String())
-		}
+func getTypeOf(def any) (types.ValueType, error) {
+	switch def.(type) {
+	case float64:
+		return types.ValueTypeF64, nil
+	case float32:
+		return types.ValueTypeF32, nil
+	case int32, uint32, int, int16, int8, bool:
+		return types.ValueTypeI32, nil
+	case int64, uint64, uintptr, uint:
+		return types.ValueTypeI64, nil
+	default:
+		return 0x00, fmt.Errorf("invalid type: %T", def)
 	}
 
 }
