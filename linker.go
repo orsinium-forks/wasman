@@ -80,25 +80,28 @@ func (l *Linker) Define(modName string, mod *Module) {
 type AdvancedFunc func(ins *Instance) any
 
 func DefineFunc10[A any](l *Linker, modName, funcName string, f func(A)) error {
-	sig, err := getSignatureN0([]any{*new(A)})
-	if err != nil {
-		return ErrInvalidSign
-	}
-	return l.defineFunc(modName, funcName, sig, f)
+	return l.defineFunc(modName, funcName, f, []any{*new(A)}, []any{})
 }
 
 func DefineFunc11[A, Z any](l *Linker, modName, funcName string, f func(A) Z) error {
-	sig, err := getSignatureN1([]any{*new(A)}, *new(Z))
-	if err != nil {
-		return ErrInvalidSign
-	}
-	return l.defineFunc(modName, funcName, sig, f)
+	return l.defineFunc(modName, funcName, f, []any{*new(A)}, []any{*new(Z)})
 }
 
 // DefineFunc puts a simple go style func into Linker's modules.
 // This f should be a simply func which doesnt handle ins's fields.
-func (l *Linker) defineFunc(modName, funcName string, sig *types.FuncType, f any) error {
-	fn := func(ins *Instance) any {
+func (l *Linker) defineFunc(modName, funcName string, f any, ins []any, outs []any) error {
+	var err error
+	sig := &types.FuncType{}
+	sig.InputTypes, err = getTypesOf(ins)
+	if err != nil {
+		return err
+	}
+	sig.ReturnTypes, err = getTypesOf(outs)
+	if err != nil {
+		return err
+	}
+
+	fn := func(_ *Instance) any {
 		return f
 	}
 	mod, exists := l.Modules[modName]
@@ -227,29 +230,7 @@ func (l *Linker) Instantiate(mainModule *Module) (*Instance, error) {
 	return NewInstance(mainModule, l.Modules)
 }
 
-func getSignatureN0(in []any) (*types.FuncType, error) {
-	var err error
-	ins, err := getTypesOf(in...)
-	if err != nil {
-		return nil, err
-	}
-	return &types.FuncType{InputTypes: ins, ReturnTypes: []types.ValueType{}}, nil
-}
-
-func getSignatureN1(in []any, out any) (*types.FuncType, error) {
-	var err error
-	ins, err := getTypesOf(in...)
-	if err != nil {
-		return nil, err
-	}
-	outs, err := getTypesOf(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.FuncType{InputTypes: ins, ReturnTypes: outs}, nil
-}
-
-func getTypesOf(defaults ...any) ([]types.ValueType, error) {
+func getTypesOf(defaults []any) ([]types.ValueType, error) {
 	var err error
 	types := make([]types.ValueType, len(defaults))
 	for i, def := range defaults {
