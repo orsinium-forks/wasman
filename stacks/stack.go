@@ -6,7 +6,7 @@ type Stack[T any] struct {
 }
 
 func (s *Stack[T]) Push(val T) {
-	if s.Ptr+1 == len(s.Values) {
+	if s.Ptr+1 >= len(s.Values) {
 		// grow stack
 		s.Values = append(s.Values, val)
 	} else {
@@ -32,4 +32,3 @@ func (s *Stack[T]) Drop() {
 func (s *Stack[T]) Peek() T {
 	return s.Values[s.Ptr]
 }
-

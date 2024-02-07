@@ -55,6 +55,7 @@ func (f *wasmFunc) call(ins *Instance) (err error) {
 		LabelStack: stacks.NewLabelStack(),
 	}
 	ins.FrameStack.Push(frame)
+	defer ins.FrameStack.Pop()
 	ins.Active = frame
 
 	err = ins.execFunc()
