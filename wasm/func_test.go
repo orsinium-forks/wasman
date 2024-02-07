@@ -1,7 +1,6 @@
 package wasm
 
 import (
-	"math"
 	"testing"
 
 	"github.com/c0mm4nd/wasman/expr"
@@ -10,10 +9,10 @@ import (
 )
 
 func TestHostFunction_Call(t *testing.T) {
-	var cnt int64
-	f := func(in int64) (int32, int64, float32, float64) {
-		cnt += in
-		return 1, 2, 3, 4
+	var cnt uint64
+	f := func(in []uint64) []uint64 {
+		cnt += in[0]
+		return []uint64{1, 2, 3, 4}
 	}
 	hf := &HostFunc{
 		function: f,
@@ -27,20 +26,24 @@ func TestHostFunction_Call(t *testing.T) {
 	vm.OperandStack.Push(10)
 	err := hf.call(vm)
 	if err != nil {
+		t.Logf("call error: %v", err)
 		t.Fail()
 	}
 	if vm.OperandStack.Ptr != 3 {
+		t.Logf("pointer is %v", vm.OperandStack.Ptr)
 		t.Fail()
 	}
 	if cnt != 10 {
+		t.Logf("cnt %v", vm.OperandStack.Ptr)
 		t.Fail()
 	}
 
 	// f64
-	if math.Float64frombits(vm.OperandStack.Pop()) != 4.0 {
+	if vm.OperandStack.Pop() != 4 {
+		t.Logf("cnt %v", vm.OperandStack.Ptr)
 		t.Fail()
 	}
-	if float32(math.Float64frombits(vm.OperandStack.Pop())) != 3.0 {
+	if vm.OperandStack.Pop() != 3 {
 		t.Fail()
 	}
 	if vm.OperandStack.Pop() != 2 {

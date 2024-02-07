@@ -3,6 +3,7 @@ package wasman
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/c0mm4nd/wasman/config"
 	"github.com/c0mm4nd/wasman/wasm"
@@ -15,6 +16,14 @@ import (
 var (
 	ErrInvalidSign = errors.New("invalid signature")
 )
+
+// Primitive is a type constraint for arguments and results of host-defined functions
+// that can be used with the linker.
+type Primitive interface {
+	int | int8 | int16 | int32 | int64 |
+		uint | uint8 | uint16 | uint32 | uint64 | uintptr |
+		float32 | float64
+}
 
 // Linker is a helper to instantiate new modules
 type Linker struct {
@@ -44,52 +53,17 @@ func (l *Linker) Define(modName string, mod *Module) {
 	l.Modules[modName] = mod
 }
 
-// AdvancedFunc is a advanced host func comparing to normal go host func
-// Dev will be able to handle the pre/post-call process of the func and manipulate
-// the Instance's fields like memory
-//
-// e.g. when we wanna add toll after calling the host func f
-//
-//	func ExampleFuncGenerator_addToll() {
-//		var linker = wasman.NewLinker()
-//		var f = func() {fmt.Println("wasm")}
-//
-//		var af = wasman.AdvancedFunc(func(ins *wasman.Instance) any {
-//			return func() {
-//				f()
-//				ins.AddGas(11)
-//			}
-//		})
-//		linker.DefineAdvancedFunc("env", "add_gas", af)
-//	}
-//
-// e.g. when we wanna manipulate memory
-//
-//	func ExampleFuncGenerator_addToll() {
-//		var linker = wasman.NewLinker()
-//
-//		var af = wasman.AdvancedFunc(func(ins *wasman.Instance) any {
-//			return func(ptr uint32, length uint32) {
-//				msg := ins.Memory[int(ptr), int(ptr+uint32)]
-//				fmt.Println(b)
-//			}
-//		})
-//
-//		linker.DefineAdvancedFunc("env", "print_msg", af)
-//	}
-type AdvancedFunc func(ins *Instance) any
-
-func DefineFunc10[A any](l *Linker, modName, funcName string, f func(A)) error {
-	return l.defineFunc(modName, funcName, f, []any{*new(A)}, []any{})
+func DefineFunc10[A Primitive](l *Linker, modName, funcName string, f func(A)) error {
+	return l.defineFunc(modName, funcName, wrapFunc10(f), []any{*new(A)}, []any{})
 }
 
-func DefineFunc11[A, Z any](l *Linker, modName, funcName string, f func(A) Z) error {
-	return l.defineFunc(modName, funcName, f, []any{*new(A)}, []any{*new(Z)})
+func DefineFunc11[A, Z Primitive](l *Linker, modName, funcName string, f func(A) Z) error {
+	return l.defineFunc(modName, funcName, wrapFunc11(f), []any{*new(A)}, []any{*new(Z)})
 }
 
 // DefineFunc puts a simple go style func into Linker's modules.
 // This f should be a simply func which doesnt handle ins's fields.
-func (l *Linker) defineFunc(modName, funcName string, f any, ins []any, outs []any) error {
+func (l *Linker) defineFunc(modName, funcName string, f wasm.RawHostFunc, ins []any, outs []any) error {
 	var err error
 	sig := &types.FuncType{}
 	sig.InputTypes, err = getTypesOf(ins)
@@ -101,9 +75,6 @@ func (l *Linker) defineFunc(modName, funcName string, f any, ins []any, outs []a
 		return err
 	}
 
-	fn := func(_ *Instance) any {
-		return f
-	}
 	mod, exists := l.Modules[modName]
 	if !exists {
 		mod = &Module{IndexSpace: new(wasm.IndexSpace), ExportSection: map[string]*segments.ExportSegment{}}
@@ -123,7 +94,9 @@ func (l *Linker) defineFunc(modName, funcName string, f any, ins []any, outs []a
 	}
 
 	mod.IndexSpace.Functions = append(mod.IndexSpace.Functions, &wasm.HostFunc{
-		Generator: fn,
+		Generator: func(_ *Instance) wasm.RawHostFunc {
+			return f
+		},
 		Signature: sig,
 	})
 
@@ -256,5 +229,44 @@ func getTypeOf(def any) (types.ValueType, error) {
 	default:
 		return 0x00, fmt.Errorf("invalid type: %T", def)
 	}
+}
 
+func wrapFunc10[A Primitive](f func(A)) wasm.RawHostFunc {
+	wrapper := func(a []uint64) []uint64 {
+		a1 := fromU[A](a[0])
+		f(a1)
+		return []uint64{}
+	}
+	return wrapper
+}
+
+func wrapFunc11[A, Z Primitive](f func(A) Z) wasm.RawHostFunc {
+	wrapper := func(a []uint64) []uint64 {
+		a1 := fromU[A](a[0])
+		r1 := f(a1)
+		return []uint64{toU(r1)}
+	}
+	return wrapper
+}
+
+func fromU[T Primitive](val uint64) T {
+	switch any(*new(T)).(type) {
+	case float32:
+		return T(float32(math.Float64frombits(val)))
+	case float64:
+		return T(math.Float64frombits(val))
+	default:
+		return T(val)
+	}
+}
+
+func toU[T Primitive](val T) uint64 {
+	switch v := any(val).(type) {
+	case float32:
+		return math.Float64bits(float64(v))
+	case float64:
+		return math.Float64bits(v)
+	default:
+		return uint64(val)
+	}
 }
