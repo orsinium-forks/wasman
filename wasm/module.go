@@ -75,3 +75,9 @@ func NewModule(config config.ModuleConfig, r *bytes.Reader) (*Module, error) {
 
 	return module, nil
 }
+
+func (m *Module) log(text string) {
+	if m.ModuleConfig.Logger != nil {
+		m.ModuleConfig.Logger(text)
+	}
+}

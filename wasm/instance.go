@@ -38,17 +38,22 @@ func NewInstance(module *Module, externModules map[string]*Module) (*Instance, e
 		},
 	}
 
+	module.log("building index space")
 	if err := ins.buildIndexSpaces(externModules); err != nil {
 		return nil, fmt.Errorf("build index space: %w", err)
 	}
 
 	// initializing memory
+	module.log("initializing memory")
 	ins.Memory = ins.Module.IndexSpace.Memories[0]
-	if diff := uint64(ins.Module.MemorySection[0].Min)*uint64(config.DefaultMemoryPageSize) - uint64(len(ins.Memory.Value)); diff > 0 {
+	diff := uint64(ins.Module.MemorySection[0].Min)*uint64(config.DefaultMemoryPageSize) - uint64(len(ins.Memory.Value))
+	if diff > 0 {
+		// module.log(fmt.Sprintf("3: %v", diff))
 		ins.Memory.Value = append(ins.Memory.Value, make([]byte, diff)...)
 	}
 
 	// initializing functions
+	module.log("initializing functions")
 	ins.Functions = make([]fn, len(ins.Module.IndexSpace.Functions))
 	for i, f := range ins.Module.IndexSpace.Functions {
 		if wasmFn, ok := f.(*HostFunc); ok {
@@ -60,6 +65,7 @@ func NewInstance(module *Module, externModules map[string]*Module) (*Instance, e
 	}
 
 	// initialize global
+	module.log("initializing globals")
 	ins.Globals = make([]uint64, len(ins.Module.IndexSpace.Globals))
 	for i, raw := range ins.Module.IndexSpace.Globals {
 		switch v := raw.Val.(type) {
@@ -75,6 +81,7 @@ func NewInstance(module *Module, externModules map[string]*Module) (*Instance, e
 	}
 
 	// exec start functions
+	module.log("running start func")
 	for _, id := range ins.Module.StartSection {
 		if int(id) >= len(ins.Functions) {
 			return nil, ErrFuncIndexOutOfRange
