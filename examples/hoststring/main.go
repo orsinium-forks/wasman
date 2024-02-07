@@ -13,38 +13,35 @@ import (
 // Run me on root folder
 // go run ./examples/hoststring
 func main() {
+	var ins *wasman.Instance
 	linker1 := wasman.NewLinker(config.LinkerConfig{})
 
 	//err := linker1.DefineMemory("env", "memory", make([]byte, 10))
 
-	err := linker1.DefineAdvancedFunc("env", "host_string", func(ins *wasman.Instance) interface{} {
-		return func() uint32 {
-			message := "WASMan"
+	err := wasman.DefineFunc01(linker1, "env", "host_string", func() uint32 {
+		message := "WASMan"
 
-			ret, _, err := ins.CallExportedFunc("allocate", uint64(len(message)+1))
-			if err != nil {
-				panic(err)
-			}
-
-			copy(ins.Memory.Value[ret[0]:], append([]byte(message), byte(0))) // act as a string for rust's CStr::from_ptr(ptr)
-
-			return uint32(ret[0])
+		ret, _, err := ins.CallExportedFunc("allocate", uint64(len(message)+1))
+		if err != nil {
+			panic(err)
 		}
+
+		copy(ins.Memory.Value[ret[0]:], append([]byte(message), byte(0))) // act as a string for rust's CStr::from_ptr(ptr)
+
+		return uint32(ret[0])
 	})
 	if err != nil {
 		panic(err)
 	}
 
 	// cannot call host func in the host func
-	err = linker1.DefineAdvancedFunc("env", "log_message", func(ins *wasman.Instance) interface{} {
-		return func(ptr uint32, l uint32) {
-			// string way
-			fmt.Println(C.GoString((*C.char)(unsafe.Pointer(&ins.Memory.Value[ptr]))))
+	err = wasman.DefineFunc20(linker1, "env", "log_message", func(ptr uint32, l uint32) {
+		// string way
+		fmt.Println(C.GoString((*C.char)(unsafe.Pointer(&ins.Memory.Value[ptr]))))
 
-			// bytes way
-			msg := ins.Memory.Value[ptr : ptr+l]
-			fmt.Println(string(msg))
-		}
+		// bytes way
+		msg := ins.Memory.Value[ptr : ptr+l]
+		fmt.Println(string(msg))
 	})
 	if err != nil {
 		panic(err)
@@ -59,7 +56,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	ins, err := linker1.Instantiate(module)
+	ins, err = linker1.Instantiate(module)
 	if err != nil {
 		panic(err)
 	}

@@ -53,12 +53,24 @@ func (l *Linker) Define(modName string, mod *Module) {
 	l.Modules[modName] = mod
 }
 
+func DefineFunc01[Z Primitive](l *Linker, modName, funcName string, f func() Z) error {
+	return l.defineFunc(modName, funcName, wrapFunc01(f), []any{}, []any{*new(Z)})
+}
+
 func DefineFunc10[A Primitive](l *Linker, modName, funcName string, f func(A)) error {
 	return l.defineFunc(modName, funcName, wrapFunc10(f), []any{*new(A)}, []any{})
 }
 
 func DefineFunc11[A, Z Primitive](l *Linker, modName, funcName string, f func(A) Z) error {
 	return l.defineFunc(modName, funcName, wrapFunc11(f), []any{*new(A)}, []any{*new(Z)})
+}
+
+func DefineFunc20[A, B Primitive](l *Linker, modName, funcName string, f func(A, B)) error {
+	return l.defineFunc(modName, funcName, wrapFunc20(f), []any{*new(A), *new(B)}, []any{})
+}
+
+func DefineFunc21[A, B, Z Primitive](l *Linker, modName, funcName string, f func(A, B) Z) error {
+	return l.defineFunc(modName, funcName, wrapFunc21(f), []any{*new(A), *new(B)}, []any{*new(Z)})
 }
 
 // DefineFunc puts a simple go style func into Linker's modules.
@@ -231,6 +243,14 @@ func getTypeOf(def any) (types.ValueType, error) {
 	}
 }
 
+func wrapFunc01[Z Primitive](f func() Z) wasm.RawHostFunc {
+	wrapper := func(a []uint64) []uint64 {
+		r1 := f()
+		return []uint64{toU(r1)}
+	}
+	return wrapper
+}
+
 func wrapFunc10[A Primitive](f func(A)) wasm.RawHostFunc {
 	wrapper := func(a []uint64) []uint64 {
 		a1 := fromU[A](a[0])
@@ -244,6 +264,26 @@ func wrapFunc11[A, Z Primitive](f func(A) Z) wasm.RawHostFunc {
 	wrapper := func(a []uint64) []uint64 {
 		a1 := fromU[A](a[0])
 		r1 := f(a1)
+		return []uint64{toU(r1)}
+	}
+	return wrapper
+}
+
+func wrapFunc20[A, B Primitive](f func(A, B)) wasm.RawHostFunc {
+	wrapper := func(a []uint64) []uint64 {
+		a1 := fromU[A](a[0])
+		a2 := fromU[B](a[1])
+		f(a1, a2)
+		return []uint64{}
+	}
+	return wrapper
+}
+
+func wrapFunc21[A, B, Z Primitive](f func(A, B) Z) wasm.RawHostFunc {
+	wrapper := func(a []uint64) []uint64 {
+		a1 := fromU[A](a[0])
+		a2 := fromU[B](a[1])
+		r1 := f(a1, a2)
 		return []uint64{toU(r1)}
 	}
 	return wrapper

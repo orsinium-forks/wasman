@@ -12,23 +12,20 @@ import (
 // Run me on root folder
 // go run ./examples/hostbytes
 func main() {
+	var ins *wasman.Instance
 	linker1 := wasman.NewLinker(config.LinkerConfig{})
 
 	message1 := []byte{0xDE, 0xAD, 0x00, 0xBE, 0xEF, 0x00, 0xBA, 0xAD, 0x00, 0xF0, 0x0D}
 
-	err := linker1.DefineAdvancedFunc("env", "get_host_bytes_size", func(ins *wasman.Instance) interface{} {
-		return func() uint32 {
-			return uint32(len(message1))
-		}
+	err := wasman.DefineFunc01(linker1, "env", "get_host_bytes_size", func() uint32 {
+		return uint32(len(message1))
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = linker1.DefineAdvancedFunc("env", "get_host_bytes", func(ins *wasman.Instance) interface{} {
-		return func(ptr uint32) {
-			copy(ins.Memory.Value[ptr:], message1)
-		}
+	err = wasman.DefineFunc10(linker1, "env", "get_host_bytes", func(ptr uint32) {
+		copy(ins.Memory.Value[ptr:], message1)
 	})
 	if err != nil {
 		panic(err)
@@ -36,32 +33,28 @@ func main() {
 
 	message2 := append(message1, message1...)
 
-	err = linker1.DefineAdvancedFunc("env", "get_host_bytes_with_buffer", func(ins *wasman.Instance) interface{} {
-		return func(index uint32, ptr uint32) uint32 {
-			if index == 0 {
-				message2 = append(message1, message1...) // reset the value
-			}
-
-			length := copy(ins.Memory.Value[ptr:], message2)
-			message2 = message2[length:]
-
-			return uint32(length)
+	err = wasman.DefineFunc21(linker1, "env", "get_host_bytes_with_buffer", func(index uint32, ptr uint32) uint32 {
+		if index == 0 {
+			message2 = append(message1, message1...) // reset the value
 		}
+
+		length := copy(ins.Memory.Value[ptr:], message2)
+		message2 = message2[length:]
+
+		return uint32(length)
 	})
 	if err != nil {
 		panic(err)
 	}
 
 	// cannot call host func in the host func
-	err = linker1.DefineAdvancedFunc("env", "log_message", func(ins *wasman.Instance) interface{} {
-		return func(ptr uint32, l uint32) {
-			// string way
-			// fmt.Println(C.GoString((*C.char)(unsafe.Pointer(&ins.Memory.Value[ptr])))) // not good for bytes
+	err = wasman.DefineFunc20(linker1, "env", "log_message", func(ptr uint32, l uint32) {
+		// string way
+		// fmt.Println(C.GoString((*C.char)(unsafe.Pointer(&ins.Memory.Value[ptr])))) // not good for bytes
 
-			// bytes way
-			msg := ins.Memory.Value[ptr : ptr+l]
-			fmt.Printf("%x\n", msg)
-		}
+		// bytes way
+		msg := ins.Memory.Value[ptr : ptr+l]
+		fmt.Printf("%x\n", msg)
 	})
 	if err != nil {
 		panic(err)
@@ -76,7 +69,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	ins, err := linker1.Instantiate(module)
+	ins, err = linker1.Instantiate(module)
 	if err != nil {
 		panic(err)
 	}
