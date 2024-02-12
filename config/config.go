@@ -29,6 +29,7 @@ type ModuleConfig struct {
 	TollStation       tollstation.TollStation
 	CallDepthLimit    *uint64
 	Recover           bool // avoid panic inside vm
+	Logger            func(string)
 }
 
 // LinkerConfig is the config applied to the wasman.Linker
