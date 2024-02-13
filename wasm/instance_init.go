@@ -395,10 +395,12 @@ func (ins *Instance) parseBlocks(body []byte) (map[uint64]*funcBlock, error) {
 		case expr.OpCodeElse:
 			stack[len(stack)-1].ElseAt = pc
 		case expr.OpCodeEnd:
-			bl := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
-			bl.EndAt = pc
-			ret[bl.StartAt] = bl
+			if len(stack) > 0 {
+				bl := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				bl.EndAt = pc
+				ret[bl.StartAt] = bl
+			}
 		}
 	}
 
