@@ -39,6 +39,7 @@ type Module struct {
 	ElementsSection []*segments.ElemSegment
 	CodeSection     []*segments.CodeSegment
 	DataSection     []*segments.DataSegment
+	DataCount       uint32
 
 	// index spaces
 	IndexSpace *IndexSpace

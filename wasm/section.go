@@ -14,18 +14,19 @@ import (
 type sectionID byte
 
 const (
-	sectionIDCustom   sectionID = 0
-	sectionIDType     sectionID = 1
-	sectionIDImport   sectionID = 2
-	sectionIDFunction sectionID = 3
-	sectionIDTable    sectionID = 4
-	sectionIDMemory   sectionID = 5
-	sectionIDGlobal   sectionID = 6
-	sectionIDExport   sectionID = 7
-	sectionIDStart    sectionID = 8
-	sectionIDElement  sectionID = 9
-	sectionIDCode     sectionID = 10
-	sectionIDData     sectionID = 11
+	sectionIDCustom    sectionID = 0
+	sectionIDType      sectionID = 1
+	sectionIDImport    sectionID = 2
+	sectionIDFunction  sectionID = 3
+	sectionIDTable     sectionID = 4
+	sectionIDMemory    sectionID = 5
+	sectionIDGlobal    sectionID = 6
+	sectionIDExport    sectionID = 7
+	sectionIDStart     sectionID = 8
+	sectionIDElement   sectionID = 9
+	sectionIDCode      sectionID = 10
+	sectionIDData      sectionID = 11
+	sectionIDDataCount sectionID = 12
 )
 
 func (m *Module) readSections(r *bytes.Reader) error {
@@ -76,6 +77,8 @@ func (m *Module) readSection(r *bytes.Reader) error {
 		err = m.readSectionCodes(r)
 	case sectionIDData:
 		err = m.readSectionData(r)
+	case sectionIDDataCount:
+		err = m.readSectionDataCount(r)
 	default:
 		err = errors.New("invalid section id")
 	}
@@ -247,7 +250,7 @@ func (m *Module) readSectionCodes(r *bytes.Reader) error {
 		return fmt.Errorf("get size of vector: %w", err)
 	}
 
-	m.CodeSection = make([]*segments.CodeSegment, vs)	
+	m.CodeSection = make([]*segments.CodeSegment, vs)
 	for i := range m.CodeSection {
 		m.CodeSection[i], err = segments.ReadCodeSegment(r)
 		if err != nil {
@@ -264,6 +267,10 @@ func (m *Module) readSectionData(r *bytes.Reader) error {
 		return fmt.Errorf("get size of vector: %w", err)
 	}
 
+	if m.DataCount > 0 && vs != m.DataCount {
+		return fmt.Errorf("data count is not equal to data section length")
+	}
+
 	m.DataSection = make([]*segments.DataSegment, vs)
 	for i := range m.DataSection {
 		m.DataSection[i], err = segments.ReadDataSegment(r)
@@ -272,5 +279,15 @@ func (m *Module) readSectionData(r *bytes.Reader) error {
 		}
 	}
 
+	return nil
+}
+
+func (m *Module) readSectionDataCount(r *bytes.Reader) error {
+	vs, _, err := leb128decode.DecodeUint32(r)
+	if err != nil {
+		return fmt.Errorf("get size of vector: %w", err)
+	}
+
+	m.DataCount = vs
 	return nil
 }
