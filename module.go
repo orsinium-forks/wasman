@@ -21,3 +21,9 @@ func NewModule(config config.ModuleConfig, r io.Reader) (*Module, error) {
 
 	return wasm.NewModule(config, bytes.NewReader(b))
 }
+
+// NewModuleFromBytes is a wrapper to the wasm.NewModule that avoids having to
+// make a copy of bytes that are already in memory.
+func NewModuleFromBytes(config config.ModuleConfig, b []byte) (*Module, error) {
+	return wasm.NewModule(config, bytes.NewReader(b))
+}

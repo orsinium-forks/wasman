@@ -211,17 +211,11 @@ func (m *Module) readSectionExports(r *bytes.Reader) error {
 }
 
 func (m *Module) readSectionStart(r *bytes.Reader) error {
-	vs, _, err := leb128decode.DecodeUint32(r)
+	var err error
+	m.StartSection = make([]uint32, 1)
+	m.StartSection[0], _, err = leb128decode.DecodeUint32(r)
 	if err != nil {
-		return fmt.Errorf("get size of vector: %w", err)
-	}
-
-	m.StartSection = make([]uint32, vs)
-	for i := range m.StartSection {
-		m.StartSection[i], _, err = leb128decode.DecodeUint32(r)
-		if err != nil {
-			return fmt.Errorf("read function index: %w", err)
-		}
+		return fmt.Errorf("read function index: %w", err)
 	}
 
 	return nil
