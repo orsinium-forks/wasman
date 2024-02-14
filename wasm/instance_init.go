@@ -216,7 +216,6 @@ func (ins *Instance) buildMemoryIndexSpace() error {
 		}
 
 		memory := ins.IndexSpace.Memories[d.MemoryIndex]
-		println("buildMemoryIndexSpace", int(offset), len(d.Init), len(memory.Value))
 		if size > len(memory.Value) {
 			next := make([]byte, size)
 			copy(next, memory.Value)

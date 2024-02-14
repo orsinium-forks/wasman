@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"github.com/c0mm4nd/wasman/config"
+	"github.com/c0mm4nd/wasman/utils"
 	"github.com/c0mm4nd/wasman/wasm"
 
 	"github.com/c0mm4nd/wasman/segments"
@@ -203,7 +204,7 @@ func (l *Linker) DefineMemory(modName, memName string, mem []byte) error {
 	}
 
 	mod.IndexSpace.Memories = append(mod.IndexSpace.Memories, &wasm.Memory{
-		MemoryType: *mod.MemorySection[0],
+		MemoryType: types.MemoryType{Min: 0, Max: utils.Uint32Ptr(config.DefaultMemoryPageSize)},
 		Value:      mem,
 	})
 
