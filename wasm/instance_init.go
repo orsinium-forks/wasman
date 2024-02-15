@@ -193,6 +193,11 @@ func (ins *Instance) buildFunctionIndexSpace() error {
 
 func (ins *Instance) buildMemoryIndexSpace() error {
 	for _, d := range ins.Module.DataSection {
+		if len(ins.IndexSpace.Memories) == 1 {
+			// already have external memory
+			return nil
+		}
+
 		// note: MVP restricts the size of memory index spaces to 1
 		if d.MemoryIndex >= uint32(len(ins.IndexSpace.Memories)) {
 			return fmt.Errorf("index out of range of index space")
