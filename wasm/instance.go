@@ -47,9 +47,8 @@ func NewInstance(module *Module, externModules map[string]*Module) (*Instance, e
 	module.log("initializing memory")
 	if len(ins.Module.IndexSpace.Memories) > 0 {
 		ins.Memory = ins.Module.IndexSpace.Memories[0]
-		// diff := uint64(ins.Module.MemorySection[0].Min)*uint64(config.DefaultMemoryPageSize) - uint64(len(ins.Memory.Value))
 		// ignore the requested amount of memory and just provide a single page
-		diff := uint64(config.DefaultMemoryPageSize) - uint64(len(ins.Memory.Value))
+		diff := config.DefaultMemoryPageSize - len(ins.Memory.Value)
 		if diff > 0 {
 			// module.log(fmt.Sprintf("3: %v", diff))
 			ins.Memory.Value = append(ins.Memory.Value, make([]byte, diff)...)

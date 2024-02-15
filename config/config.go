@@ -10,15 +10,15 @@ const (
 	// MemoryPageSize is the unit of memory length in WebAssembly,
 	// and is defined as 2^16 = 65536.
 	// See https://www.w3.org/TR/2019/REC-wasm-core-1-20191205/#memory-instances%E2%91%A0
-	//DefaultMemoryPageSize = 65536
-	DefaultMemoryPageSize = 4096 // using a tiny page size for tiny devices...
+	DefaultMemoryPageSize = 65536
+	//DefaultMemoryPageSize = 4096 // if you need a tiny page size for tiny devices...
 	// MemoryMaxPages is maximum number of pages defined (2^16).
 	// See https://www.w3.org/TR/2019/REC-wasm-core-1-20191205/#grow-mem
 	// TODO: this is not used yet
 	DefaultMemoryMaxPages = 2
 	// MemoryPageSizeInBits satisfies the relation: "1 << MemoryPageSizeInBits == MemoryPageSize".
-	//DefaultMemoryPageSizeInBits = 16
-	DefaultMemoryPageSizeInBits = 12
+	DefaultMemoryPageSizeInBits = 16
+	//DefaultMemoryPageSizeInBits = 12 // to match the tiny config version
 )
 
 var (
