@@ -54,6 +54,10 @@ func (l *Linker) Define(modName string, mod *Module) {
 	l.Modules[modName] = mod
 }
 
+func DefineFunc(l *Linker, modName, funcName string, f func()) error {
+	return l.defineFunc(modName, funcName, wrapFunc00(f), []any{}, []any{})
+}
+
 func DefineFunc01[Z Primitive](l *Linker, modName, funcName string, f func() Z) error {
 	return l.defineFunc(modName, funcName, wrapFunc01(f), []any{}, []any{*new(Z)})
 }
@@ -242,6 +246,14 @@ func getTypeOf(def any) (types.ValueType, error) {
 	default:
 		return 0x00, fmt.Errorf("invalid type: %T", def)
 	}
+}
+
+func wrapFunc00(f func()) wasm.RawHostFunc {
+	wrapper := func([]uint64) []uint64 {
+		f()
+		return []uint64{}
+	}
+	return wrapper
 }
 
 func wrapFunc01[Z Primitive](f func() Z) wasm.RawHostFunc {
