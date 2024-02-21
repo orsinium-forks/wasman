@@ -208,7 +208,7 @@ func (l *Linker) DefineMemory(modName, memName string, mem []byte) error {
 	}
 
 	mod.IndexSpace.Memories = append(mod.IndexSpace.Memories, &wasm.Memory{
-		MemoryType: types.MemoryType{Min: 0, Max: utils.Uint32Ptr(config.DefaultMemoryPageSize)},
+		MemoryType: types.MemoryType{Min: 1, Max: utils.Uint32Ptr(config.DefaultMemoryMaxPages)},
 		External:   true,
 		Value:      mem,
 	})
