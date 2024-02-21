@@ -307,33 +307,21 @@ func bulkMemory(ins *Instance) error {
 		// table.fill
 		return tableFill(ins)
 	default:
-		println("subcode", opByte)
 		return ErrInvalidSubcode
 	}
 }
 
 func memoryInit(ins *Instance) error {
+	ins.Active.PC++
+
 	idx, err := ins.fetchUint32()
 	if err != nil {
 		return err
 	}
 
-	ins.Active.PC++
-
-	dest, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	offset, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	size, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
+	size := uint32(ins.OperandStack.Pop())
+	offset := uint32(ins.OperandStack.Pop())
+	dest := uint32(ins.OperandStack.Pop())
 
 	if dest+size > uint32(len(ins.Memory.Value)) {
 		return ErrPtrOutOfBounds
@@ -348,6 +336,8 @@ func memoryInit(ins *Instance) error {
 }
 
 func dataDrop(ins *Instance) error {
+	ins.Active.PC++
+
 	// value returned here is the index of the data segment.
 	_, err := ins.fetchUint32()
 	if err != nil {
@@ -362,20 +352,9 @@ func memoryCopy(ins *Instance) error {
 	ins.Active.PC++
 	ins.Active.PC++
 
-	dest, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	src, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	size, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
+	size := uint32(ins.OperandStack.Pop())
+	src := uint32(ins.OperandStack.Pop())
+	dest := uint32(ins.OperandStack.Pop())
 
 	if src+size > uint32(len(ins.Memory.Value)) || dest+size > uint32(len(ins.Memory.Value)) {
 		return ErrPtrOutOfBounds
@@ -388,9 +367,9 @@ func memoryCopy(ins *Instance) error {
 func memoryFill(ins *Instance) error {
 	ins.Active.PC++
 
-	dest := uint32(ins.OperandStack.Pop())
-	v := uint32(ins.OperandStack.Pop())
 	size := uint32(ins.OperandStack.Pop())
+	v := uint32(ins.OperandStack.Pop())
+	dest := uint32(ins.OperandStack.Pop())
 
 	if dest+size > uint32(len(ins.Memory.Value)) {
 		return ErrPtrOutOfBounds
@@ -404,6 +383,8 @@ func memoryFill(ins *Instance) error {
 }
 
 func tableInit(ins *Instance) error {
+	ins.Active.PC++
+
 	eidx, err := ins.fetchUint32()
 	if err != nil {
 		return err
@@ -414,20 +395,9 @@ func tableInit(ins *Instance) error {
 		return err
 	}
 
-	dest, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	offset, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	size, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
+	size := uint32(ins.OperandStack.Pop())
+	offset := uint32(ins.OperandStack.Pop())
+	dest := uint32(ins.OperandStack.Pop())
 
 	if dest+size > uint32(len(ins.IndexSpace.Tables[tidx].Value)) {
 		return ErrPtrOutOfBounds
@@ -443,6 +413,8 @@ func tableInit(ins *Instance) error {
 }
 
 func elementDrop(ins *Instance) error {
+	ins.Active.PC++
+
 	// value returned here is the index of the element.
 	_, err := ins.fetchUint32()
 	if err != nil {
@@ -454,6 +426,8 @@ func elementDrop(ins *Instance) error {
 }
 
 func tableCopy(ins *Instance) error {
+	ins.Active.PC++
+
 	// value returned here is the index of the table.
 	xidx, err := ins.fetchUint32()
 	if err != nil {
@@ -466,20 +440,9 @@ func tableCopy(ins *Instance) error {
 		return err
 	}
 
-	dest, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	src, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
-
-	size, err := ins.fetchUint32()
-	if err != nil {
-		return err
-	}
+	size := uint32(ins.OperandStack.Pop())
+	src := uint32(ins.OperandStack.Pop())
+	dest := uint32(ins.OperandStack.Pop())
 
 	if src+size > uint32(len(ins.IndexSpace.Tables[xidx].Value)) || dest+size > uint32(len(ins.IndexSpace.Tables[yidx].Value)) {
 		return ErrPtrOutOfBounds
@@ -490,6 +453,8 @@ func tableCopy(ins *Instance) error {
 }
 
 func tableGrow(ins *Instance) error {
+	ins.Active.PC++
+
 	// value returned here is the index of the table.
 	_, err := ins.fetchUint32()
 	if err != nil {
@@ -501,8 +466,13 @@ func tableGrow(ins *Instance) error {
 }
 
 func tableSize(ins *Instance) error {
+	ins.Active.PC++
+
 	// value returned here is the index of the table.
-	idx := uint32(ins.OperandStack.Pop())
+	idx, err := ins.fetchUint32()
+	if err != nil {
+		return err
+	}
 
 	if len(ins.IndexSpace.Tables) == 0 {
 		v := int32(-1)
@@ -516,5 +486,23 @@ func tableSize(ins *Instance) error {
 }
 
 func tableFill(ins *Instance) error {
-	return errors.New("not implemented")
+	ins.Active.PC++
+
+	// value returned here is the index of the table.
+	idx, err := ins.fetchUint32()
+	if err != nil {
+		return err
+	}
+
+	size := uint32(ins.OperandStack.Pop())
+	// the value to fill with
+	ins.OperandStack.Pop()
+	dest := uint32(ins.OperandStack.Pop())
+
+	if dest+size > uint32(len(ins.IndexSpace.Tables[idx].Value)) {
+		return ErrPtrOutOfBounds
+	}
+
+	// TODO: fill table data
+	return nil
 }
