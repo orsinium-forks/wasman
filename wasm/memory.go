@@ -8,7 +8,8 @@ import (
 // Memory is an instance of the memory value
 type Memory struct {
 	types.MemoryType
-	Value []byte
+	External bool
+	Value    []byte
 }
 
 // memoryBytesNumToPages converts the given number of bytes into the number of pages.

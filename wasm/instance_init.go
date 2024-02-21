@@ -193,7 +193,8 @@ func (ins *Instance) buildFunctionIndexSpace() error {
 
 func (ins *Instance) buildMemoryIndexSpace() error {
 	for _, d := range ins.Module.DataSection {
-		if len(ins.IndexSpace.Memories) == 1 {
+		if len(ins.IndexSpace.Memories) == 1 &&
+			ins.IndexSpace.Memories[0].External {
 			// already have external memory
 			return nil
 		}
