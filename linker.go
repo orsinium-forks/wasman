@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"github.com/c0mm4nd/wasman/config"
+	"github.com/c0mm4nd/wasman/utils"
 	"github.com/c0mm4nd/wasman/wasm"
 
 	"github.com/c0mm4nd/wasman/segments"
@@ -51,6 +52,10 @@ func NewLinkerWithModuleMap(config config.LinkerConfig, in map[string]*Module) *
 // Define put the module on its namespace
 func (l *Linker) Define(modName string, mod *Module) {
 	l.Modules[modName] = mod
+}
+
+func DefineFunc(l *Linker, modName, funcName string, f func()) error {
+	return l.defineFunc(modName, funcName, wrapFunc00(f), []any{}, []any{})
 }
 
 func DefineFunc01[Z Primitive](l *Linker, modName, funcName string, f func() Z) error {
@@ -203,7 +208,8 @@ func (l *Linker) DefineMemory(modName, memName string, mem []byte) error {
 	}
 
 	mod.IndexSpace.Memories = append(mod.IndexSpace.Memories, &wasm.Memory{
-		MemoryType: *mod.MemorySection[0],
+		MemoryType: types.MemoryType{Min: 1, Max: utils.Uint32Ptr(config.DefaultMemoryMaxPages)},
+		External:   true,
 		Value:      mem,
 	})
 
@@ -241,6 +247,14 @@ func getTypeOf(def any) (types.ValueType, error) {
 	default:
 		return 0x00, fmt.Errorf("invalid type: %T", def)
 	}
+}
+
+func wrapFunc00(f func()) wasm.RawHostFunc {
+	wrapper := func([]uint64) []uint64 {
+		f()
+		return []uint64{}
+	}
+	return wrapper
 }
 
 func wrapFunc01[Z Primitive](f func() Z) wasm.RawHostFunc {

@@ -56,6 +56,7 @@ func GetOpCodeName(op OpCode) string {
 			OpCodeI64Store32: "I64Store32",
 			OpCodeMemorySize: "MemorySize",
 			OpCodeMemoryGrow: "MemoryGrow",
+			OpCodeBulkMemory: "BulkMemory",
 
 			// numeric instruction
 			OpCodeI32Const: "I32Const",

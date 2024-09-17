@@ -208,5 +208,5 @@ const (
 	OpCodeIsNull OpCode = 0xd1
 	OpCodeFunc   OpCode = 0xd2
 
-	// TODO: 0xfc
+	OpCodeBulkMemory OpCode = 0xfc
 )

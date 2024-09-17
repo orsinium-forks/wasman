@@ -45,11 +45,14 @@ func NewInstance(module *Module, externModules map[string]*Module) (*Instance, e
 
 	// initializing memory
 	module.log("initializing memory")
-	ins.Memory = ins.Module.IndexSpace.Memories[0]
-	diff := uint64(ins.Module.MemorySection[0].Min)*uint64(config.DefaultMemoryPageSize) - uint64(len(ins.Memory.Value))
-	if diff > 0 {
-		// module.log(fmt.Sprintf("3: %v", diff))
-		ins.Memory.Value = append(ins.Memory.Value, make([]byte, diff)...)
+	if len(ins.Module.IndexSpace.Memories) > 0 {
+		ins.Memory = ins.Module.IndexSpace.Memories[0]
+		// ignore the requested amount of memory and just provide a single page
+		diff := config.DefaultMemoryPageSize - len(ins.Memory.Value)
+		if diff > 0 {
+			// module.log(fmt.Sprintf("3: %v", diff))
+			ins.Memory.Value = append(ins.Memory.Value, make([]byte, diff)...)
+		}
 	}
 
 	// initializing functions
@@ -81,6 +84,7 @@ func NewInstance(module *Module, externModules map[string]*Module) (*Instance, e
 	}
 
 	// exec start functions
+	// isn't it true that there is only a single function?
 	module.log("running start func")
 	for _, id := range ins.Module.StartSection {
 		if int(id) >= len(ins.Functions) {

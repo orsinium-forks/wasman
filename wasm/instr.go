@@ -60,6 +60,7 @@ var instructions = [256]func(ins *Instance) error{
 	expr.OpCodeI64Store32:        i64Store32,
 	expr.OpCodeMemorySize:        memorySize,
 	expr.OpCodeMemoryGrow:        memoryGrow,
+	expr.OpCodeBulkMemory:        bulkMemory,
 	expr.OpCodeI32Const:          i32Const,
 	expr.OpCodeI64Const:          i64Const,
 	expr.OpCodeF32Const:          f32Const,

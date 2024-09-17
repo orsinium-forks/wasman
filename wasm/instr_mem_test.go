@@ -600,3 +600,43 @@ func Test_memoryGrow(t *testing.T) {
 	})
 
 }
+
+func Test_memoryInit(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_dataDrop(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_memoryCopy(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_memoryFill(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_tableInit(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_elementDrop(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_tableCopy(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_tableGrow(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_tableSize(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func Test_tableFill(t *testing.T) {
+	t.Skip("TODO")
+}

@@ -196,8 +196,8 @@ func (ins *Instance) buildMemoryIndexSpace() error {
 		// note: MVP restricts the size of memory index spaces to 1
 		if d.MemoryIndex >= uint32(len(ins.IndexSpace.Memories)) {
 			return fmt.Errorf("index out of range of index space")
-		} else if d.MemoryIndex >= uint32(len(ins.MemorySection)) {
-			return fmt.Errorf("index out of range of memory section")
+		} else if !ins.IndexSpace.Memories[0].External && d.MemoryIndex >= uint32(len(ins.MemorySection)) {
+			return fmt.Errorf("index out of range of memory section %d %d", d.MemoryIndex, len(ins.MemorySection))
 		}
 
 		rawOffset, err := ins.execExpr(d.OffsetExpression)
@@ -211,7 +211,7 @@ func (ins *Instance) buildMemoryIndexSpace() error {
 		}
 
 		size := int(offset) + len(d.Init)
-		if ins.MemorySection[d.MemoryIndex].Max != nil && uint32(size) > *(ins.MemorySection[d.MemoryIndex].Max)*config.DefaultMemoryPageSize {
+		if len(ins.MemorySection) > 0 && ins.MemorySection[d.MemoryIndex].Max != nil && uint32(size) > *(ins.MemorySection[d.MemoryIndex].Max)*config.DefaultMemoryPageSize {
 			return fmt.Errorf("memory size out of limit %d * 64Ki", int(*(ins.MemorySection[d.MemoryIndex].Max)))
 		}
 
@@ -395,10 +395,12 @@ func (ins *Instance) parseBlocks(body []byte) (map[uint64]*funcBlock, error) {
 		case expr.OpCodeElse:
 			stack[len(stack)-1].ElseAt = pc
 		case expr.OpCodeEnd:
-			bl := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
-			bl.EndAt = pc
-			ret[bl.StartAt] = bl
+			if len(stack) > 0 {
+				bl := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				bl.EndAt = pc
+				ret[bl.StartAt] = bl
+			}
 		}
 	}
 
